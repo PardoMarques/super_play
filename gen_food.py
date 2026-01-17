@@ -29,6 +29,7 @@ from project.core import (
     ActionRecorder,
     setup_recorder,
 )
+from project.core.log import setup_file_logging, close_file_logging
 
 logger = get_logger("gen_food")
 
@@ -173,13 +174,85 @@ def run_interact(
     # Registra handler de Ctrl+C
     original_handler = signal.signal(signal.SIGINT, handle_interrupt)
     
+    # Sistema de pageId - mapeia URL normalizada para pageId
+    pages_visited: dict = {}  # {url_normalizada: {"pageId": int, "title": str, "first_visit": str}}
+    next_page_id = 1
+    current_url = ""
+    
+    def normalize_url(raw_url: str) -> str:
+        """Normaliza URL removendo query strings e fragments para comparação."""
+        from urllib.parse import urlparse, urlunparse
+        parsed = urlparse(raw_url)
+        # Mantém scheme, netloc, path - remove query e fragment
+        return urlunparse((parsed.scheme, parsed.netloc, parsed.path, "", "", ""))
+    
+    def get_or_create_page_id(raw_url: str, title: str = "") -> tuple:
+        """
+        Retorna (pageId, is_new) para a URL.
+        Se URL já foi visitada, retorna pageId existente e is_new=False.
+        """
+        nonlocal next_page_id
+        normalized = normalize_url(raw_url)
+        
+        if normalized in pages_visited:
+            return pages_visited[normalized]["pageId"], False
+        
+        # Nova página
+        page_id = next_page_id
+        next_page_id += 1
+        pages_visited[normalized] = {
+            "pageId": page_id,
+            "url": raw_url,
+            "title": title,
+            "first_visit": datetime.now(timezone.utc).isoformat(),
+        }
+        return page_id, True
+    
+    def capture_page_snapshot(page_obj, page_id: int, is_new: bool) -> None:
+        """
+        Captura screenshot (sempre) e HTML (só se página nova).
+        Screenshot: <timestamp>_page_<pageId>.png
+        HTML: page_<pageId>.html (só se is_new)
+        """
+        timestamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
+        
+        # Screenshot sempre com timestamp
+        screenshot_name = f"{timestamp}_page_{page_id}.png"
+        screenshot_path = dirs["screenshots"] / screenshot_name
+        try:
+            page_obj.screenshot(path=str(screenshot_path), full_page=True)
+            logger.info(f"Screenshot salvo: {screenshot_path.name}")
+        except Exception as e:
+            logger.warning(f"Erro ao salvar screenshot: {e}")
+        
+        # HTML só se página nova (não repetida)
+        if is_new:
+            html_name = f"page_{page_id}.html"
+            html_path = dirs["html"] / html_name
+            try:
+                html_content = page_obj.content()
+                with open(html_path, "w", encoding="utf-8") as f:
+                    f.write(html_content)
+                logger.info(f"HTML salvo: {html_path.name}")
+            except Exception as e:
+                logger.warning(f"Erro ao salvar HTML: {e}")
+    
     try:
         # Configura gravador no browser
         setup_recorder(context, page, recorder)
         
         # Navega para URL (usa 'load' ao invés de 'networkidle' para SPAs)
         page.goto(url, wait_until="load", timeout=30000)
-        logger.info(f"Página carregada: {page.title()}")
+        title = page.title()
+        logger.info(f"Página carregada: {title}")
+        
+        # Registra página inicial
+        current_url = page.url
+        page_id, is_new = get_or_create_page_id(current_url, title)
+        logger.info(f"Página ID: {page_id} (nova: {is_new})")
+        
+        # Captura inicial
+        capture_page_snapshot(page, page_id, is_new)
         
         # Loop aguardando fechamento ou interrupção
         logger.info("Aguardando interações...")
@@ -196,12 +269,21 @@ def run_interact(
                 
                 # Verifica se a página responde
                 current_page.evaluate("1")
-                current_page.wait_for_timeout(500)
                 
-                # Atualiza referência se mudou
-                if current_page != page:
+                # Verifica se a URL mudou (navegação)
+                new_url = current_page.url
+                if new_url != current_url:
+                    current_url = new_url
                     page = current_page
-                    logger.info(f"Navegação detectada: {page.url[:50]}...")
+                    title = page.title()
+                    
+                    page_id, is_new = get_or_create_page_id(current_url, title)
+                    logger.info(f"Navegação detectada: {current_url[:50]}... → Page ID: {page_id}")
+                    
+                    # Captura screenshot (sempre) e HTML (só se nova)
+                    capture_page_snapshot(page, page_id, is_new)
+                
+                current_page.wait_for_timeout(500)
                     
             except Exception as e:
                 # Verifica se é realmente fechamento ou só erro temporário
@@ -216,30 +298,37 @@ def run_interact(
                     logger.info("Browser fechado pelo usuário.")
                     break
         
-        # Pega a última página ativa para snapshot final
+        # Tenta captura final
         try:
             if context.pages:
                 page = context.pages[-1]
+                page_id, is_new = get_or_create_page_id(page.url, page.title())
+                capture_page_snapshot(page, page_id, is_new)
         except Exception:
-            pass
+            logger.info("Usando última captura (browser já fechado).")
         
-        # Captura snapshot final
-        logger.info("Capturando snapshot final...")
-        
+        # Extrai elementos da última página
+        extraction = {"page_signals": {}, "elements": []}
         try:
-            html_path = dirs["html"] / "page.html"
-            screenshot_path = dirs["screenshots"] / "page.png"
-            capture_snapshot(page, str(html_path), str(screenshot_path))
-            
-            # Extrai elementos da página final
-            extraction = extract_elements(page, mask_sensitive=mask_sensitive)
+            if context.pages:
+                extraction = extract_elements(page, mask_sensitive=mask_sensitive)
         except Exception as e:
-            logger.warning(f"Não foi possível capturar snapshot final: {e}")
-            extraction = {"page_signals": {}, "elements": []}
+            logger.warning(f"Não foi possível extrair elementos: {e}")
         
         # Para gravação
         actions = recorder.stop()
         summary = recorder.get_summary()
+        
+        # Monta lista de páginas visitadas com pageId
+        urls_visited_with_id = [
+            {
+                "pageId": info["pageId"],
+                "url": info["url"],
+                "title": info["title"],
+                "first_visit": info["first_visit"],
+            }
+            for info in pages_visited.values()
+        ]
         
         # Monta food.json
         timestamp = datetime.now(timezone.utc).isoformat()
@@ -249,9 +338,13 @@ def run_interact(
             "run_id": run_id,
             "timestamp": timestamp,
             "mode": "interact",
+            "pages_visited": urls_visited_with_id,
             "page_signals": extraction["page_signals"],
             "elements": extraction["elements"],
-            "action_summary": summary,
+            "action_summary": {
+                **summary,
+                "total_pages": len(pages_visited),
+            },
         }
         
         # Salva food.json
@@ -264,6 +357,7 @@ def run_interact(
             "success": True,
             "elements_count": len(extraction["elements"]),
             "actions_count": summary["total_actions"],
+            "pages_count": len(pages_visited),
             "action_types": summary["action_types"],
             "page_signals": extraction["page_signals"],
         }
@@ -392,6 +486,10 @@ Exemplos:
     run_id = generate_run_id()
     dirs = create_run_dirs(config.artifacts_dir, run_id)
     
+    # Configura logging para arquivo
+    log_path = dirs["logs"] / "session.log"
+    setup_file_logging(log_path)
+    
     started_at = datetime.now(timezone.utc).isoformat()
     
     logger.info(f"Run ID: {run_id}")
@@ -400,6 +498,7 @@ Exemplos:
     logger.info(f"Headless: {args.headless}")
     logger.info(f"Profile dir: {args.profile_dir or '(nenhum)'}")
     logger.info(f"Run dir: {dirs['run']}")
+    logger.info(f"Log: {log_path}")
     
     # Executa modo selecionado
     if args.mode == "snapshot":
@@ -443,13 +542,16 @@ Exemplos:
     if result.get("success"):
         elements = result.get('elements_count', 0)
         actions = result.get('actions_count', 0)
+        pages = result.get('pages_count', 1)
         if args.mode == "interact":
-            logger.info(f"✅ Coleta concluída! {elements} elementos, {actions} ações gravadas.")
+            logger.info(f"✅ Coleta concluída! {elements} elementos, {actions} ações, {pages} páginas.")
         else:
             logger.info(f"✅ Coleta concluída! {elements} elementos extraídos.")
+        close_file_logging()
         return 0
     else:
         logger.error(f"❌ Coleta falhou: {result.get('error', 'erro desconhecido')}")
+        close_file_logging()
         return 1
 
 
