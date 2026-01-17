@@ -1,0 +1,8 @@
+python-dotenv
+requests
+playwright
+psycopg[binary]
+pytest
+pytest-bdd
+rich
+scrapy
