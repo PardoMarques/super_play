@@ -18,3 +18,6 @@ Documentação sobre a ferramenta de coleta de dados `gen_food.py`, incluindo:
 
 ### 4. [🔮 Funcionalidades Futuras](future_functions/README.md)
 Documentação sobre funcionalidades planejadas para implementação futura (ex: `--prefixo`).
+
+### 5. [🧪 Suíte de Testes](gen_food_test_suite.md)
+Documentação dos testes automatizados e estrutura de evidências.

@@ -21,7 +21,7 @@ def generate_run_id() -> str:
     return f"{timestamp}_{hex_suffix}"
 
 
-def create_run_dirs(artifacts_dir: Path, run_id: str) -> Dict[str, Path]:
+def create_run_dirs(artifacts_dir: Path | str, run_id: str) -> Dict[str, Path]:
     """
     Cria a estrutura de diretórios para uma execução.
     
@@ -33,12 +33,16 @@ def create_run_dirs(artifacts_dir: Path, run_id: str) -> Dict[str, Path]:
             └── screenshots/
     
     Args:
-        artifacts_dir: Diretório base de artefatos.
+        artifacts_dir: Diretório base de artefatos (str ou Path).
         run_id: Identificador único da execução.
     
     Returns:
         Dicionário com os caminhos de cada subdiretório.
     """
+    # Garante que artifacts_dir é Path
+    if isinstance(artifacts_dir, str):
+        artifacts_dir = Path(artifacts_dir)
+    
     run_dir = artifacts_dir / "runs" / run_id
     
     subdirs = {
