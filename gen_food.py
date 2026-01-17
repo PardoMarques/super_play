@@ -41,7 +41,6 @@ def run_snapshot(
     dirs: dict,
     run_id: str,
     headless: bool,
-    profile_dir: str | None,
     mask_sensitive: bool,
 ) -> dict:
     """
@@ -52,7 +51,6 @@ def run_snapshot(
         dirs: Dicionário de diretórios do run.
         run_id: ID da execução.
         headless: Se True, roda sem janela.
-        profile_dir: Diretório de perfil para sessão persistente.
         mask_sensitive: Se True, mascara dados sensíveis.
     
     Returns:
@@ -63,7 +61,6 @@ def run_snapshot(
     # Cria browser
     browser, context, page = create_browser_context(
         headless=headless,
-        profile_dir=profile_dir,
     )
     
     try:
@@ -121,7 +118,6 @@ def run_interact(
     dirs: dict,
     run_id: str,
     headless: bool,
-    profile_dir: str | None,
     mask_sensitive: bool,
 ) -> dict:
     """
@@ -135,7 +131,6 @@ def run_interact(
         dirs: Dicionário de diretórios do run.
         run_id: ID da execução.
         headless: Ignorado - interact sempre usa headed.
-        profile_dir: Diretório de perfil para sessão persistente.
         mask_sensitive: Se True, mascara dados sensíveis.
     
     Returns:
@@ -160,7 +155,6 @@ def run_interact(
     # Cria browser (sempre headed)
     browser, context, page = create_browser_context(
         headless=False,  # Sempre headed
-        profile_dir=profile_dir,
     )
     
     # Flag para controle de interrupção
@@ -450,12 +444,7 @@ Exemplos:
         help="Rodar browser sem janela visível (apenas snapshot)",
     )
     
-    parser.add_argument(
-        "--profile-dir",
-        type=str,
-        default=None,
-        help="Diretório de perfil para manter sessão/login entre execuções",
-    )
+
     
     parser.add_argument(
         "--no-mask",
@@ -496,7 +485,6 @@ Exemplos:
     logger.info(f"URL: {url}")
     logger.info(f"Modo: {args.mode}")
     logger.info(f"Headless: {args.headless}")
-    logger.info(f"Profile dir: {args.profile_dir or '(nenhum)'}")
     logger.info(f"Run dir: {dirs['run']}")
     logger.info(f"Log: {log_path}")
     
@@ -507,7 +495,6 @@ Exemplos:
             dirs=dirs,
             run_id=run_id,
             headless=args.headless,
-            profile_dir=args.profile_dir,
             mask_sensitive=mask_sensitive,
         )
     else:
@@ -516,7 +503,6 @@ Exemplos:
             dirs=dirs,
             run_id=run_id,
             headless=args.headless,
-            profile_dir=args.profile_dir,
             mask_sensitive=mask_sensitive,
         )
     
@@ -528,7 +514,6 @@ Exemplos:
         "url": url,
         "mode": args.mode,
         "headless": args.headless if args.mode == "snapshot" else False,
-        "profile_dir_used": args.profile_dir is not None,
         "mask_sensitive": mask_sensitive,
         "result": result,
     }

@@ -5,6 +5,21 @@
 > **Licença:** [Certificado Anti-Cópia (Restrito)](LICENSE) 🛑
 
 Automation framework robusto com Playwright, pytest-bdd e Scrapy, focado em resiliência e coleta inteligente de dados.
+---
+
+## ⚡ Impacto na Produtividade
+
+Automação "Vibe Coder" vs **Engenharia Real**:
+
+| Atividade Manual (Tradicional) | Tempo Gasto | Gen Food (Automático) | Tempo Gasto |
+| :--- | :---: | :--- | :---: |
+| Inspecionar, testar e copiar seletores (F12) | 4h / tela | Extração automática de candidatos | **2 min** |
+| Escrever Page Objects na mão | 2h / tela | Geração baseada em dados reais | **Instantâneo** |
+| Debuggar "Element Not Found" instável | Eterno | Seletores robustos + Retry Policy | **Zero** |
+| Entender esperas (Wait For) | ??? | Snapshot preciso do estado HTML | **Garantido** |
+| Refatoração por Mudança de Layout | Dias? | Regeneração de Food (Dados) | **10 min** |
+
+> **Resultado:** Projetos que levariam **semanas** de sofrimento e manutenção eterna são entregues em **horas** com estabilidade industrial. Pare de "codar no feeling" e comece a **engenharia de automação**.
 
 ---
 
@@ -57,14 +72,6 @@ Abre o navegador para você navegar. O sistema grava cliques, textos digitados e
 ```powershell
 python gen_food.py --url https://deepai.org --mode interact
 ```
-
-### 3. Manter Sessão (Login)
-Para não precisar logar toda vez, use `--profile-dir`:
-
-```powershell
-python gen_food.py --url https://painel.exemplo.com --profile-dir ./perfis/admin
-```
-
 ---
 
 ## 📂 Estrutura de Artefatos
