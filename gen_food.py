@@ -186,13 +186,42 @@ def run_interact(
         
         while not interrupted:
             try:
-                # Verifica se browser ainda está aberto
-                # Isso vai lançar exceção se o browser foi fechado
-                page.evaluate("1")
-                page.wait_for_timeout(500)
-            except Exception:
-                logger.info("Browser fechado pelo usuário.")
-                break
+                # Verifica se ainda há páginas abertas no contexto
+                if not context.pages:
+                    logger.info("Browser fechado pelo usuário.")
+                    break
+                
+                # Pega a página ativa atual (pode mudar durante navegação SPA)
+                current_page = context.pages[-1]
+                
+                # Verifica se a página responde
+                current_page.evaluate("1")
+                current_page.wait_for_timeout(500)
+                
+                # Atualiza referência se mudou
+                if current_page != page:
+                    page = current_page
+                    logger.info(f"Navegação detectada: {page.url[:50]}...")
+                    
+            except Exception as e:
+                # Verifica se é realmente fechamento ou só erro temporário
+                try:
+                    if not context.pages:
+                        logger.info("Browser fechado pelo usuário.")
+                        break
+                    # Se ainda há páginas, pode ser navegação - tenta continuar
+                    page = context.pages[-1]
+                    continue
+                except Exception:
+                    logger.info("Browser fechado pelo usuário.")
+                    break
+        
+        # Pega a última página ativa para snapshot final
+        try:
+            if context.pages:
+                page = context.pages[-1]
+        except Exception:
+            pass
         
         # Captura snapshot final
         logger.info("Capturando snapshot final...")
