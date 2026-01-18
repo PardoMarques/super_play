@@ -1,11 +1,14 @@
-"""Carregador de configuração com suporte a .env."""
+"""
+Configuration loader with .env support.
+Carregador de configuracao com suporte a .env.
+"""
 
 import os
 from pathlib import Path
 from dataclasses import dataclass
 from typing import Optional
 
-# Tenta carregar dotenv, faz fallback se não estiver instalado
+# Try loading dotenv, fallback if not installed
 try:
     from dotenv import load_dotenv
     _HAS_DOTENV = True
@@ -15,36 +18,36 @@ except ImportError:
 
 @dataclass
 class Config:
-    """Configuração da aplicação."""
+    """Application configuration."""
     
     base_url: Optional[str]
     artifacts_dir: Path
     
     def __post_init__(self):
-        # Garante que artifacts_dir seja um Path
+        # Ensure artifacts_dir is a Path
         if isinstance(self.artifacts_dir, str):
             self.artifacts_dir = Path(self.artifacts_dir)
 
 
 def get_config(env_path: Optional[str] = None) -> Config:
     """
-    Carrega configuração das variáveis de ambiente.
+    Loads configuration from environment variables.
     
-    Carrega arquivo .env se python-dotenv estiver instalado.
+    Loads .env file if python-dotenv is installed.
     
     Args:
-        env_path: Caminho opcional para arquivo .env. Padrão: .env no cwd.
+        env_path: Optional path to .env file. Default: .env in cwd.
     
     Returns:
-        Objeto Config com os valores carregados.
+        Config object with loaded values.
     """
-    # Carrega .env se disponível
+    # Load .env if available
     if _HAS_DOTENV:
         env_file = Path(env_path) if env_path else Path(".env")
         if env_file.exists():
             load_dotenv(env_file)
     
-    # Obtém valores com defaults
+    # Get values with defaults
     base_url = os.getenv("BASE_URL")
     artifacts_dir = os.getenv("ARTIFACTS_DIR", "./artifacts")
     

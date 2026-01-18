@@ -1,4 +1,7 @@
-"""Gerenciamento de artefatos e diretórios de execução."""
+"""
+Artifact and run directory management.
+Gerenciamento de artefatos e diretorios de execucao.
+"""
 
 import os
 import secrets
@@ -9,37 +12,39 @@ from typing import Dict
 
 def generate_run_id() -> str:
     """
-    Gera um ID único de execução.
+    Generates a unique execution ID.
+    Gera um ID unico de execucao.
     
-    Formato: YYYYMMDD_HHMMSS_<4hex>
+    Format: YYYYMMDD_HHMMSS_<6hex>
     
     Returns:
-        String identificadora única da execução.
+        Unique string identifier for the execution.
+        String identificadora unica da execucao.
     """
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    hex_suffix = secrets.token_hex(2)  # 4 caracteres hexadecimais
+    hex_suffix = secrets.token_hex(3)  # 6 hex characters (16M combinations)
     return f"{timestamp}_{hex_suffix}"
 
 
 def create_run_dirs(artifacts_dir: Path | str, run_id: str) -> Dict[str, Path]:
     """
-    Cria a estrutura de diretórios para uma execução.
+    Creates directory structure for a run.
     
-    Cria:
+    Creates:
         artifacts/runs/<run_id>/
-            ├── logs/
-            ├── food/
-            ├── html/
-            └── screenshots/
+            - logs/
+            - food/
+            - html/
+            - screenshots/
     
     Args:
-        artifacts_dir: Diretório base de artefatos (str ou Path).
-        run_id: Identificador único da execução.
+        artifacts_dir: Base artifacts directory (str or Path).
+        run_id: Unique execution identifier.
     
     Returns:
-        Dicionário com os caminhos de cada subdiretório.
+        Dictionary with paths to each subdirectory.
     """
-    # Garante que artifacts_dir é Path
+    # Ensure artifacts_dir is Path
     if isinstance(artifacts_dir, str):
         artifacts_dir = Path(artifacts_dir)
     
@@ -53,7 +58,7 @@ def create_run_dirs(artifacts_dir: Path | str, run_id: str) -> Dict[str, Path]:
         "screenshots": run_dir / "screenshots",
     }
     
-    # Cria todos os diretórios
+    # Create all directories
     for path in subdirs.values():
         path.mkdir(parents=True, exist_ok=True)
     

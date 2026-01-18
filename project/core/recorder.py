@@ -1,4 +1,7 @@
-"""Gravador de ações do usuário via hooks JavaScript."""
+"""
+EN: User action recorder via JavaScript hooks.
+PT: Gravador de acoes do usuario via hooks JavaScript.
+"""
 
 import json
 from datetime import datetime, timezone
@@ -10,18 +13,18 @@ from .log import get_logger
 
 logger = get_logger(__name__)
 
-# Script JavaScript para capturar eventos do usuário
+# JavaScript script to capture user events
 RECORDER_SCRIPT = """
 (() => {
-    // Evita injeção dupla
+    // Avoid double injection
     if (window.__superPlayRecorder) return;
     window.__superPlayRecorder = true;
     
-    // Configuração de mascaramento
+    // Masking configuration
     const SENSITIVE_TYPES = ['password'];
     const SENSITIVE_AUTOCOMPLETE = ['password', 'current-password', 'new-password'];
     
-    // Função para verificar se input é sensível
+    // Function to check if input is sensitive
     function isSensitiveInput(el) {
         if (!el) return false;
         const type = (el.type || '').toLowerCase();
@@ -30,7 +33,7 @@ RECORDER_SCRIPT = """
                SENSITIVE_AUTOCOMPLETE.some(s => autocomplete.includes(s));
     }
     
-    // Função para gerar candidatos de seletores
+    // Function to generate selector candidates
     function getCandidates(el) {
         const candidates = [];
         const tag = el.tagName.toLowerCase();
@@ -90,7 +93,7 @@ RECORDER_SCRIPT = """
             });
         }
         
-        // 7. css path curto (fallback)
+        // 7. short css path (fallback)
         if (candidates.length === 0) {
             let path = [];
             let current = el;
@@ -125,7 +128,7 @@ RECORDER_SCRIPT = """
         return candidates;
     }
     
-    // Função para extrair info do elemento
+    // Function to extract element info
     function getElementInfo(el) {
         if (!el || !el.tagName) return null;
         
@@ -141,7 +144,7 @@ RECORDER_SCRIPT = """
         };
     }
     
-    // Envia evento para Python
+    // Send event to Python
     function sendEvent(type, el, extra = {}) {
         const element = getElementInfo(el);
         const event = {
@@ -152,19 +155,19 @@ RECORDER_SCRIPT = """
             ...extra
         };
         
-        // Envia via binding exposto pelo Playwright
+        // Send via binding exposed by Playwright
         if (window.__recordAction) {
             window.__recordAction(JSON.stringify(event));
         }
     }
     
-    // Listener de click
+    // Click listener
     document.addEventListener('click', (e) => {
         const el = e.target;
         sendEvent('click', el);
     }, true);
     
-    // Listener de input (com debounce)
+    // Input listener (with debounce)
     let inputTimeout = null;
     document.addEventListener('input', (e) => {
         const el = e.target;
@@ -179,7 +182,7 @@ RECORDER_SCRIPT = """
         }, 300);
     }, true);
     
-    // Listener de change (selects, checkboxes, etc)
+    // Change listener (selects, checkboxes, etc)
     document.addEventListener('change', (e) => {
         const el = e.target;
         const isSensitive = isSensitiveInput(el);
@@ -198,34 +201,34 @@ RECORDER_SCRIPT = """
         sendEvent('change', el, { value: value, masked: isSensitive });
     }, true);
     
-    // Listener de submit
+    // Submit listener
     document.addEventListener('submit', (e) => {
         const el = e.target;
         sendEvent('submit', el);
     }, true);
     
-    // Listener de keydown (Enter, Escape)
+    // Keydown listener (Enter, Escape)
     document.addEventListener('keydown', (e) => {
         if (e.key === 'Enter' || e.key === 'Escape') {
             sendEvent('keydown', e.target, { key: e.key });
         }
     }, true);
     
-    console.log('[SuperPlay] Recorder ativo');
+    console.log('[SuperPlay] Recorder active');
 })();
 """
 
 
 class ActionRecorder:
-    """Gravador de ações do usuário."""
+    """User action recorder."""
     
     def __init__(self, output_path: Path, mask_sensitive: bool = True):
         """
-        Inicializa o gravador.
+        Initializes recorder.
         
         Args:
-            output_path: Caminho para salvar actions.ndjson
-            mask_sensitive: Se True, mascara dados sensíveis.
+            output_path: Path to save actions.ndjson
+            mask_sensitive: If True, masks sensitive data.
         """
         self.output_path = output_path
         self.mask_sensitive = mask_sensitive
@@ -233,27 +236,27 @@ class ActionRecorder:
         self._file = None
     
     def start(self) -> None:
-        """Inicia gravação, abrindo arquivo para escrita."""
+        """Starts recording, opening file for writing."""
         self._file = open(self.output_path, "w", encoding="utf-8")
-        logger.info(f"Gravação iniciada: {self.output_path}")
+        logger.info(f"Recording started: {self.output_path}")
     
     def record_action(self, action_json: str) -> None:
         """
-        Grava uma ação recebida do browser.
+        Records an action received from browser.
         
         Args:
-            action_json: JSON string com dados da ação.
+            action_json: JSON string with action data.
         """
         try:
             action = json.loads(action_json)
             self.actions.append(action)
             
-            # Escreve imediatamente no arquivo (ndjson)
+            # Write immediately to file (ndjson)
             if self._file:
                 self._file.write(json.dumps(action, ensure_ascii=False) + "\n")
                 self._file.flush()
             
-            # Log resumido
+            # Summary log
             action_type = action.get("type", "?")
             element = action.get("element", {})
             tag = element.get("tag", "?") if element else "?"
@@ -262,31 +265,35 @@ class ActionRecorder:
             if candidates:
                 selector = candidates[0].get("selector", "")[:40]
             
-            logger.info(f"[{action_type}] {tag} → {selector}")
+            logger.info(f"[{action_type}] {tag} -> {selector}")
             
         except Exception as e:
-            logger.warning(f"Erro ao gravar ação: {e}")
+            logger.warning(f"Error recording action: {e}")
     
     def stop(self) -> List[Dict[str, Any]]:
         """
-        Para gravação e retorna ações.
+        PT: Para a gravação e retorna as ações.
+        EN: Stops recording and returns actions.
         
         Returns:
-            Lista de ações gravadas.
+            List of recorded actions.
         """
         if self._file:
             self._file.close()
             self._file = None
         
-        logger.info(f"Gravação finalizada: {len(self.actions)} ações")
+        logger.info(f"Recording finished: {len(self.actions)} actions")
         return self.actions
     
     def get_summary(self) -> Dict[str, Any]:
         """
-        Retorna resumo das ações gravadas.
-        
+        PT: Retorna resumo das ações gravadas.
         Returns:
             Dicionário com resumo.
+
+        EN: Returns summary of recorded actions.
+        Returns:
+            Summary dictionary.
         """
         action_types = {}
         urls_visited = set()
@@ -305,23 +312,31 @@ class ActionRecorder:
 
 def setup_recorder(context: BrowserContext, page: Page, recorder: ActionRecorder) -> None:
     """
-    Configura gravador de ações no browser.
-    
+    PT: Configura gravador de ações no navegador.
     Args:
         context: Contexto do browser.
         page: Página inicial.
         recorder: Instância do ActionRecorder.
+
+    EN: Configures action recorder in browser.
+    Args:
+        context: Browser context.
+        page: Initial page.
+        recorder: ActionRecorder instance.
     """
     # Expõe função Python para o JavaScript chamar
+    # Expose Python function for JavaScript to call
     context.expose_binding(
         "__recordAction",
         lambda source, action_json: recorder.record_action(action_json)
     )
     
     # Injeta script em todas as páginas (atuais e futuras)
+    # Inject script in all pages (current and future)
     context.add_init_script(RECORDER_SCRIPT)
     
     # Injeta na página atual também
+    # Inject in current page as well
     page.evaluate(RECORDER_SCRIPT)
     
-    logger.info("Recorder configurado no browser")
+    logger.info("Recorder configured in browser")

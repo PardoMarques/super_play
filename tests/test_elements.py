@@ -1,7 +1,12 @@
 """
-Testes para project/core/elements.py
+English:
+Tests for project/core/elements.py
+Validates element extraction and selector candidate generation.
+Uses subprocess to avoid Sync/Async conflict with pytest-playwright.
 
-Valida extração de elementos e geração de candidatos de seletores.
+Português:
+Testes para project/core/elements.py
+Valida extração de elementos e geração de candidatos de seletor.
 Usa subprocess para evitar conflito Sync/Async com pytest-playwright.
 """
 
@@ -13,23 +18,25 @@ from pathlib import Path
 
 
 class TestExtractElements:
-    """Testes para extract_elements()"""
+    """PT: Testes para extract_elements()"""
+    """EN: Tests for extract_elements()"""
     
     def test_extraction_via_subprocess(self, temp_artifacts_dir):
-        """Testa extração de elementos via subprocess"""
+        """PT: Testa extração de elementos via subprocess"""
+        """EN: Tests element extraction via subprocess"""
         html_path = temp_artifacts_dir / "test.html"
         output_path = temp_artifacts_dir / "output.json"
         
-        # Cria HTML de teste
+        # Create test HTML
         html_content = """
         <!DOCTYPE html>
         <html>
-        <head><title>Página de Teste</title></head>
+        <head><title>Test Page</title></head>
         <body>
             <form id="login-form">
-                <input type="text" id="username" name="username" placeholder="Usuário">
-                <input type="password" id="password" name="password" placeholder="Senha">
-                <button type="submit" id="submit-btn" data-testid="login-button">Entrar</button>
+                <input type="text" id="username" name="username" placeholder="User">
+                <input type="password" id="password" name="password" placeholder="Password">
+                <button type="submit" id="submit-btn" data-testid="login-button">Enter</button>
             </form>
         </body>
         </html>
@@ -73,19 +80,20 @@ except Exception as e:
             timeout=30,
         )
         
-        assert proc_result.returncode == 0, f"Subprocess falhou: {proc_result.stderr}"
+        assert proc_result.returncode == 0, f"Subprocess failed: {proc_result.stderr}"
         assert "SUCCESS" in proc_result.stdout
         
-        # Valida output
+        # Validate output
         with open(output_path, encoding="utf-8") as f:
             result = json.load(f)
         
         assert "elements" in result
         assert "page_signals" in result
-        assert len(result["elements"]) >= 3, "Deve ter pelo menos 3 elementos (2 inputs + 1 button)"
+        assert len(result["elements"]) >= 3, "Must have at least 3 elements (2 inputs + 1 button)"
     
     def test_element_has_candidates(self, temp_artifacts_dir):
-        """Verifica que elementos têm candidatos de seletores"""
+        """PT: Verifica que os elementos têm candidatos de seletor"""
+        """EN: Verifies that elements have selector candidates"""
         html_path = temp_artifacts_dir / "test2.html"
         output_path = temp_artifacts_dir / "output2.json"
         
@@ -131,7 +139,7 @@ except Exception as e:
             timeout=30,
         )
         
-        assert proc_result.returncode == 0, f"Subprocess falhou: {proc_result.stderr}"
+        assert proc_result.returncode == 0, f"Subprocess failed: {proc_result.stderr}"
         
         with open(output_path, encoding="utf-8") as f:
             result = json.load(f)
@@ -140,5 +148,5 @@ except Exception as e:
         assert len(buttons) >= 1
         
         for btn in buttons:
-            assert "candidates" in btn, "Elemento deve ter candidates"
-            assert len(btn["candidates"]) > 0, "Deve ter pelo menos 1 candidato"
+            assert "candidates" in btn, "Element must have candidates"
+            assert len(btn["candidates"]) > 0, "Must have at least 1 candidate"

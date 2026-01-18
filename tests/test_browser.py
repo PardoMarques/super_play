@@ -1,8 +1,13 @@
 """
-Testes para project/core/browser.py
+English:
+Tests for project/core/browser.py
+Validates browser context creation.
+Note: Uses subprocess to avoid Sync/Async conflict with pytest-playwright.
 
-Valida criação de contexto de browser.
-Nota: Usamos subprocess para evitar conflito Sync/Async com pytest-playwright.
+Português:
+Testes para project/core/browser.py
+Valida criação de contexto do navegador.
+Nota: Usa subprocess para evitar conflito Sync/Async com pytest-playwright.
 """
 
 import pytest
@@ -11,18 +16,21 @@ import sys
 
 
 class TestBrowserModule:
-    """Testes para módulo browser.py"""
+    """PT: Testes para browser.py module"""
+    """EN: Tests for browser.py module"""
     
     def test_browser_module_imports(self):
-        """Módulo browser deve ser importável"""
+        """PT: Módulo browser.py deve ser importável"""
+        """EN: Browser module must be importable"""
         from project.core.browser import create_browser_context, close_browser
         assert callable(create_browser_context)
         assert callable(close_browser)
     
     def test_create_browser_and_close_via_subprocess(self):
         """
-        Testa criação e fechamento de browser via subprocess.
-        Evita conflito com asyncio do pytest-playwright.
+        PT: Testa criação e fechamento do navegador via subprocess.
+        EN: Tests browser creation and closing via subprocess.
+        Avoids conflict with pytest-playwright asyncio.
         """
         code = """
 import sys
@@ -44,5 +52,5 @@ except Exception as e:
             timeout=30,
         )
         
-        assert result.returncode == 0, f"Subprocess falhou: {result.stderr}"
+        assert result.returncode == 0, f"Subprocess failed: {result.stderr}"
         assert "SUCCESS" in result.stdout, f"Output: {result.stdout}"

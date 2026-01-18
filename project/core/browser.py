@@ -1,4 +1,7 @@
-"""Gerenciamento de browser Playwright."""
+"""
+Playwright browser management.
+Gerenciamento de browser Playwright.
+"""
 
 from typing import Tuple
 from playwright.sync_api import sync_playwright, Browser, BrowserContext, Page
@@ -12,13 +15,13 @@ def create_browser_context(
     headless: bool = False,
 ) -> Tuple[Browser, BrowserContext, Page]:
     """
-    Cria contexto de browser Playwright.
+    Creates Playwright browser context.
     
     Args:
-        headless: Se True, roda sem janela visível.
+        headless: If True, runs without visible window.
     
     Returns:
-        Tupla (browser, context, page).
+        Tuple (browser, context, page).
     """
     playwright = sync_playwright().start()
     
@@ -33,15 +36,15 @@ def create_browser_context(
 
 def close_browser(browser: Browser, context: BrowserContext) -> None:
     """
-    Fecha browser e contexto de forma segura.
+    Safely closes browser and context.
     
     Args:
-        browser: Instância do browser.
-        context: Contexto do browser.
+        browser: Browser instance.
+        context: Browser context.
     """
     try:
         context.close()
         if browser:
             browser.close()
     except Exception as e:
-        logger.warning(f"Erro ao fechar browser: {e}")
+        logger.warning(f"Error closing browser: {e}")

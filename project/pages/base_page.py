@@ -19,9 +19,11 @@ class BasePageConfig:
     default_timeout_ms: int = 15_000
     navigation_timeout_ms: int = 25_000
     artifact_dir: str = "artifacts/runs"
-    # política padrão para navegação (páginas “estranhamente” instáveis)
+    # PT: política padrão para navegação (páginas “estranhamente” instáveis)
+    # EN: default policy for navigation (pages that are "strangely" unstable)
     nav_retry_policy: RetryPolicy = RetryPolicy(attempts=3, base_delay_s=0.6, backoff=1.9, max_delay_s=6.0)
-    # política padrão para ações de UI (click/fill/etc.)
+    # PT: política padrão para ações UI (click/fill/etc.)
+    # EN: default policy for UI actions (click/fill/etc.)
     action_retry_policy: RetryPolicy = RetryPolicy(attempts=2, base_delay_s=0.25, backoff=1.6, max_delay_s=2.5)
 
 
@@ -30,27 +32,34 @@ LocatorLike = Union[Locator, str]
 
 class BasePage:
     """
-    BasePage mestra para QA/RPA.
+    PT: BasePage mestra para QA/RPA.
     Objetivo: padronizar navegação, ações, asserts e artefatos com tolerância a instabilidade.
+    EN: Master BasePage for QA/RPA.
+    Goal: standardize navigation, actions, asserts and artifacts with instability tolerance.
     """
 
     def __init__(self, page: Page, config: Optional[BasePageConfig] = None) -> None:
         self.page = page
         self.config = config or BasePageConfig()
 
-        # padroniza timeouts no Playwright (reduz ruído e “timeouts aleatórios”)
+        # PT: padroniza timeouts no Playwright (reduz ruído e "timeouts aleatórios")
+        # EN: standardize timeouts in Playwright (reduces noise and "random timeouts")
         self.page.set_default_timeout(self.config.default_timeout_ms)
         self.page.set_default_navigation_timeout(self.config.navigation_timeout_ms)
 
-        # garante pasta de artefatos
+        # PT: garante pasta de artefatos
+        # EN: ensure artifacts folder
         os.makedirs(self.config.artifact_dir, exist_ok=True)
 
     # ---------------------------
-    # Helpers (locators / artefatos)
+    # Helpers (locators / artifacts)
     # ---------------------------
 
     def L(self, locator_or_selector: LocatorLike) -> Locator:
-        """Resolve um Locator a partir de Locator ou string."""
+        """
+        PT: Resolve um Locator a partir de Locator ou string.
+        EN: Resolves a Locator from Locator or string.
+        """
         if isinstance(locator_or_selector, Locator):
             return locator_or_selector
         return self.page.locator(locator_or_selector)
@@ -65,7 +74,7 @@ class BasePage:
         try:
             self.page.screenshot(path=path, full_page=full_page)
         except Exception as e:
-            log.warning("Falha ao gerar screenshot (%s): %s", path, e)
+            log.warning("Failed to generate screenshot (%s): %s", path, e)
         return path
 
     def dump_html(self, name: str = "page") -> str:
@@ -75,16 +84,17 @@ class BasePage:
             with open(path, "w", encoding="utf-8") as f:
                 f.write(html)
         except Exception as e:
-            log.warning("Falha ao salvar HTML (%s): %s", path, e)
+            log.warning("Failed to save HTML (%s): %s", path, e)
         return path
 
     def _on_fail_artifacts(self, action_name: str) -> None:
-        # artefatos mínimos, úteis em QA e RPA
+        # PT: artefatos mínimos, útil em QA e RPA
+        # EN: minimal artifacts, useful in QA and RPA
         self.screenshot(f"FAIL__{action_name}")
         self.dump_html(f"FAIL__{action_name}")
 
     # ---------------------------
-    # Navegação resiliente (retry “clássico”)
+    # EN: Resilient navigation ("classic" retry)
     # ---------------------------
 
     def goto(
@@ -98,10 +108,14 @@ class BasePage:
         policy: Optional[RetryPolicy] = None,
     ) -> Optional[Response]:
         """
-        Navegação resiliente: útil para sites que “precisam de retry” para carregar.
+        PT: Navegação resiliente: útil para sites que “precisam de retry” para carregar.
         - wait_until: domcontentloaded|load|networkidle (networkidle pode travar em websockets)
         - ensure_ready: valida readyState e um loadState adicional
         - ready_state: 'interactive' ou 'complete'
+        EN: Resilient navigation: useful for sites that "need retry" to load.
+        - wait_until: domcontentloaded|load|networkidle (networkidle may hang on websockets)
+        - ensure_ready: validates readyState and an additional loadState
+        - ready_state: 'interactive' or 'complete'
         """
         url = self._resolve_url(path_or_url)
         nav_timeout = clamp_timeout_ms(timeout_ms, self.config.navigation_timeout_ms)
@@ -109,9 +123,10 @@ class BasePage:
 
         def _do_goto() -> Optional[Response]:
             resp = self.page.goto(url, wait_until=wait_until, timeout=nav_timeout)
-            # status ruim é “sintoma” forte de instabilidade. Prefira retry.
+            # PT: bad status is strong "symptom" of instability. Prefer retry.
+            # EN: bad status is strong "symptom" of instability. Prefer retry.
             if resp is not None and resp.status >= 500:
-                raise RuntimeError(f"HTTP {resp.status} ao abrir {url}")
+                raise RuntimeError(f"HTTP {resp.status} opening {url}")
             if ensure_ready:
                 self.ensure_page_ready(ready_state=ready_state, timeout_ms=nav_timeout)
             return resp
@@ -150,13 +165,17 @@ class BasePage:
 
     def ensure_page_ready(self, *, ready_state: str = "complete", timeout_ms: Optional[int] = None) -> None:
         """
-        “Cinto e suspensório” para páginas instáveis:
-        - Garante document.readyState >= target
-        - E executa wait_for_load_state adicional (domcontentloaded + load)
+        PT: "Belt and suspenders" for unstable pages:
+        - Ensures document.readyState >= target
+        - And executes additional wait_for_load_state (domcontentloaded + load)
+        EN: "Belt and suspenders" for unstable pages:
+        - Ensures document.readyState >= target
+        - And executes additional wait_for_load_state (domcontentloaded + load)
         """
         to_ms = clamp_timeout_ms(timeout_ms, self.config.navigation_timeout_ms)
 
-        # 1) readyState por JS (muitos sites dão loadState “ok” mas o DOM ainda muda)
+        # PT: 1) readyState por JS (muitos sites dão loadState “ok” mas o DOM ainda muda)
+        # EN: 1) readyState via JS (many sites give loadState "ok" but DOM still changes)
         def _ready_ok() -> bool:
             try:
                 state = self.page.evaluate("() => document.readyState")
@@ -168,19 +187,24 @@ class BasePage:
 
         self._wait_bool(_ready_ok, timeout_ms=to_ms, interval_ms=150, name=f"document.readyState({ready_state})")
 
-        # 2) load states: domcontentloaded é o mais “seguro”; load pode falhar em SPAs, mas é útil como extra
+        # PT: 2) load states: domcontentloaded é o "mais seguro"; load pode falhar em SPAs, mas é útil como extra
+        # EN: 2) load states: domcontentloaded is the "safest"; load may fail in SPAs, but is useful as extra
         try:
             self.page.wait_for_load_state("domcontentloaded", timeout=to_ms)
         except Exception:
-            # não explode: SPAs às vezes já passaram desse ponto
+            # PT: não explode: SPAs às vezes já passaram esse ponto
+            # EN: don't explode: SPAs sometimes have already passed this point
             pass
         try:
             self.page.wait_for_load_state("load", timeout=min(to_ms, 10_000))
         except Exception:
+            # PT: não explode: SPAs às vezes já passaram esse ponto
+            # EN: don't explode: SPAs sometimes have already passed this point
             pass
 
     # ---------------------------
-    # Ações resilientes (click/fill/etc.) com retry e waits padronizados
+    # PT: Ações resilientes (click/fill/etc.) com retry e waits padronizados
+    # EN: Resilient actions (click/fill/etc.) with retry and standardized waits
     # ---------------------------
 
     def click(
@@ -197,7 +221,8 @@ class BasePage:
         loc = self.L(locator_or_selector)
 
         def _do() -> None:
-            # waits codificáveis: minimiza “flakiness” e reduz custo de debug
+            # PT: codificáveis: minimiza "flakiness" e reduz custo de debug
+            # EN: codifiable waits: minimizes "flakiness" and reduces debug cost
             loc.wait_for(state="visible", timeout=to_ms)
             try:
                 loc.scroll_into_view_if_needed(timeout=to_ms)
@@ -233,7 +258,8 @@ class BasePage:
             except Exception:
                 pass
             if clear_first:
-                # “fill” já substitui, mas em alguns inputs (mask/JS) é mais seguro limpar explicitamente
+                # PT: "fill" já faz replace, mas em alguns inputs (máscara/JS) é mais seguro limpar explicitamente
+                # EN: "fill" already replaces, but in some inputs (mask/JS) it's safer to clear explicitly
                 try:
                     loc.fill("", timeout=to_ms)
                 except Exception:
@@ -296,7 +322,7 @@ class BasePage:
             if index is not None:
                 payload["index"] = index
             if not payload:
-                raise ValueError("Informe ao menos um entre value/label/index")
+                raise ValueError("Provide at least one of value/label/index")
             loc.select_option(timeout=to_ms, **payload)
 
         run_with_retry(
@@ -334,7 +360,8 @@ class BasePage:
         )
 
     # ---------------------------
-    # Asserts (codificáveis; Playwright já tem auto-wait)
+    # PT: Asserts (codificáveis; Playwright já tem auto-wait)
+    # EN: Asserts (codifiable; Playwright already has auto-wait)
     # ---------------------------
 
     def expect_visible(self, locator_or_selector: LocatorLike, *, timeout_ms: Optional[int] = None) -> None:
@@ -352,7 +379,8 @@ class BasePage:
         expect(self.page).to_have_url(lambda url: fragment in url, timeout=to_ms)
 
     # ---------------------------
-    # Internos
+    # PT: Internos
+    # EN: Internals
     # ---------------------------
 
     def _resolve_url(self, path_or_url: str) -> str:
@@ -366,7 +394,8 @@ class BasePage:
         return s if len(s) <= max_len else (s[:max_len] + "_etc")
 
     def _describe(self, loc: Locator) -> str:
-        # Locator.__str__ costuma ser útil para logs
+        # PT: Locator.__str__ é usualmente útil para logs
+        # EN: Locator.__str__ is usually useful for logs
         try:
             return str(loc)
         except Exception:
@@ -394,7 +423,7 @@ class BasePage:
                 last_exc = e
             time.sleep(max(0.01, interval_ms / 1000.0))
 
-        msg = f"Timeout aguardando {name} em {timeout_ms}ms"
+        msg = f"Timeout waiting for {name} in {timeout_ms}ms"
         if last_exc:
-            msg += f" (último erro: {last_exc})"
+            msg += f" (last error: {last_exc})"
         raise TimeoutError(msg)

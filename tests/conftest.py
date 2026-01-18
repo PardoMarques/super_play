@@ -1,8 +1,14 @@
 """
-Configuração de fixtures para testes do Gen Food.
+English:
+Fixtures configuration for Gen Food tests.
+Defines reusable fixtures for:
+- Evidence directory (1 per pytest session)
+- Test data
 
+Português:
+Configuração de fixtures para testes do Gen Food.
 Define fixtures reutilizáveis para:
-- Diretório de evidências (1 por sessão pytest)
+- Diretório de evidências (1 por sessão do pytest)
 - Dados de teste
 """
 
@@ -11,24 +17,26 @@ from pathlib import Path
 from datetime import datetime
 
 
-# Diretório base de evidências
+# Base evidence directory
 EVIDENCE_DIR = Path(__file__).parent / "evidence"
 
 
 def pytest_configure(config):
-    """Cria diretório de evidências no início da sessão."""
+    """PT: Cria diretório de evidências no início da sessão."""
+    """EN: Creates evidence directory at session start."""
     EVIDENCE_DIR.mkdir(exist_ok=True)
 
 
-# Variável global para manter a mesma pasta durante toda a sessão
+# Global variable to keep same folder during entire session
 _session_evidence_dir = None
 
 
 @pytest.fixture(scope="session")
 def session_evidence_dir():
     """
-    Cria UM diretório de evidências para toda a sessão pytest.
-    Todos os testes da sessão usam o mesmo diretório.
+    PT: Cria UM diretório de evidências para toda a sessão do pytest.
+    EN: Creates ONE evidence directory for entire pytest session.
+    All tests in session use the same directory.
     """
     global _session_evidence_dir
     
@@ -43,8 +51,9 @@ def session_evidence_dir():
 @pytest.fixture
 def temp_artifacts_dir(session_evidence_dir, request):
     """
-    Cria subdiretório para cada teste dentro da pasta da sessão.
-    Estrutura: evidence/run_<timestamp>/<nome_do_teste>/
+    PT: Cria subdiretório para cada teste dentro da pasta da sessão.
+    EN: Creates subdirectory for each test inside session folder.
+    Structure: evidence/run_<timestamp>/<test_name>/
     """
     test_name = request.node.name.replace("[", "_").replace("]", "_")
     test_dir = session_evidence_dir / test_name
@@ -55,7 +64,8 @@ def temp_artifacts_dir(session_evidence_dir, request):
 @pytest.fixture
 def temp_run_dirs(temp_artifacts_dir):
     """
-    Cria estrutura completa de diretórios de run para testes.
+    PT: Cria estrutura completa de diretórios para os testes.
+    EN: Creates complete run directory structure for tests.
     """
     from project.core.artifacts import create_run_dirs, generate_run_id
     
@@ -66,18 +76,21 @@ def temp_run_dirs(temp_artifacts_dir):
 
 @pytest.fixture
 def sample_html():
-    """HTML de exemplo para testes de extração."""
+    """
+    PT: HTML de exemplo para testes de extração.
+    EN: Sample HTML for extraction tests.
+    """
     return """
     <!DOCTYPE html>
     <html>
-    <head><title>Página de Teste</title></head>
+    <head><title>Test Page</title></head>
     <body>
         <form id="login-form">
-            <input type="text" id="username" name="username" placeholder="Usuário">
-            <input type="password" id="password" name="password" placeholder="Senha">
-            <button type="submit" id="submit-btn" data-testid="login-button">Entrar</button>
+            <input type="text" id="username" name="username" placeholder="User">
+            <input type="password" id="password" name="password" placeholder="Password">
+            <button type="submit" id="submit-btn" data-testid="login-button">Enter</button>
         </form>
-        <a href="/dashboard" aria-label="Ir para Dashboard">Dashboard</a>
+        <a href="/dashboard" aria-label="Go to Dashboard">Dashboard</a>
     </body>
     </html>
     """

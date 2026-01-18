@@ -1,4 +1,7 @@
-"""Extração e análise de elementos DOM."""
+"""
+DOM element extraction and analysis.
+Extracao e analise de elementos DOM.
+"""
 
 from typing import List, Dict, Any, Optional
 from playwright.sync_api import Page
@@ -7,26 +10,26 @@ from .log import get_logger
 
 logger = get_logger(__name__)
 
-# Atributos sensíveis que devem ser mascarados
+# Sensitive attributes that should be masked
 SENSITIVE_TYPES = {"password"}
 SENSITIVE_AUTOCOMPLETE = {"password", "current-password", "new-password"}
 
 
 def extract_elements(page: Page, mask_sensitive: bool = True) -> Dict[str, Any]:
     """
-    Extrai elementos interativos da página com candidatos de seletores.
+    Extracts interactive elements from page with selector candidates.
     
     Args:
-        page: Página Playwright.
-        mask_sensitive: Se True, mascara valores de inputs sensíveis.
+        page: Playwright page.
+        mask_sensitive: If True, masks sensitive input values.
     
     Returns:
-        Dicionário com page_signals e lista de elements.
+        Dictionary with page_signals and elements list.
     """
-    # Script JavaScript para extrair elementos
+    # JavaScript script to extract elements
     js_script = """
     () => {
-        // Elementos interativos para extrair
+        // Interactive elements to extract
         const interactiveSelectors = [
             'a[href]',
             'button',
@@ -50,14 +53,14 @@ def extract_elements(page: Page, mask_sensitive: bool = True) -> Dict[str, Any]:
         const elements = [];
         const seen = new Set();
         
-        // Sinais da página
+        // Page signals
         const pageSignals = {
             has_data_testid: document.querySelector('[data-testid], [data-test-id], [data-test]') !== null,
             has_aria_roles: document.querySelector('[role]') !== null,
             likely_spa: !!(window.React || window.Vue || window.angular || window.__NUXT__ || window.__NEXT_DATA__),
         };
         
-        // Função para gerar css path curto
+        // Function to generate short css path
         function getCssPath(el, maxDepth = 3) {
             const path = [];
             let current = el;
@@ -91,7 +94,7 @@ def extract_elements(page: Page, mask_sensitive: bool = True) -> Dict[str, Any]:
             return path.join(' > ');
         }
         
-        // Função para gerar xpath curto
+        // Function to generate short xpath
         function getXPath(el, maxDepth = 3) {
             const path = [];
             let current = el;
@@ -123,20 +126,20 @@ def extract_elements(page: Page, mask_sensitive: bool = True) -> Dict[str, Any]:
             return '//' + path.join('/');
         }
         
-        // Função para obter texto do label associado
+        // Function to get associated label text
         function getLabelText(el) {
             if (el.id) {
                 const label = document.querySelector('label[for="' + el.id + '"]');
                 if (label) return label.textContent.trim().substring(0, 50);
             }
-            // Label pai
+            // Parent label
             const parentLabel = el.closest('label');
             if (parentLabel) return parentLabel.textContent.trim().substring(0, 50);
             return null;
         }
         
         allElements.forEach(el => {
-            // Evita duplicatas
+            // Avoid duplicates
             const key = el.tagName + '_' + (el.id || el.name || Math.random());
             if (seen.has(key)) return;
             seen.add(key);
@@ -145,25 +148,25 @@ def extract_elements(page: Page, mask_sensitive: bool = True) -> Dict[str, Any]:
             const textContent = (el.textContent || el.innerText || '').trim().substring(0, 50);
             const inputValue = el.value || '';
             
-            // Atributos relevantes
+            // Relevant attributes
             const attrs = {};
             ['id', 'name', 'placeholder', 'type', 'href', 'role', 'aria-label'].forEach(attr => {
                 const val = el.getAttribute(attr);
                 if (val) attrs[attr] = val;
             });
             
-            // Data-testid (várias variações)
+            // Data-testid (various variations)
             ['data-testid', 'data-test-id', 'data-test'].forEach(attr => {
                 const val = el.getAttribute(attr);
                 if (val) attrs[attr] = val;
             });
             
-            // Verifica se é input sensível
+            // Check if sensitive input
             const isSensitive = 
                 attrs.type === 'password' ||
                 (el.getAttribute('autocomplete') || '').toLowerCase().includes('password');
             
-            // Gera candidatos de seletores (ordem de prioridade)
+            // Generate selector candidates (priority order)
             const candidates = [];
             
             // 1. data-testid
@@ -243,17 +246,17 @@ def extract_elements(page: Page, mask_sensitive: bool = True) -> Dict[str, Any]:
                 candidates.push({
                     strategy: 'css-path',
                     selector: cssPath,
-                    notes: 'Fallback - pode ser frágil',
+                    notes: 'Fallback - may be fragile',
                 });
             }
             
-            // 9. xpath (último recurso)
+            // 9. xpath (last resort)
             if (candidates.length === 0) {
                 const xpath = getXPath(el);
                 candidates.push({
                     strategy: 'xpath',
                     selector: xpath,
-                    notes: 'Último recurso - muito frágil',
+                    notes: 'Last resort - very fragile',
                 });
             }
             
@@ -276,7 +279,7 @@ def extract_elements(page: Page, mask_sensitive: bool = True) -> Dict[str, Any]:
         elements = result.get("elements", [])
         page_signals = result.get("pageSignals", {})
         
-        # Processa mascaramento se necessário
+        # Process masking if needed
         if mask_sensitive:
             for el in elements:
                 if el.get("isSensitive"):
@@ -284,11 +287,11 @@ def extract_elements(page: Page, mask_sensitive: bool = True) -> Dict[str, Any]:
                     if "value" in el:
                         el["value"] = "***"
         
-        # Remove flag interna
+        # Remove internal flag
         for el in elements:
             el.pop("isSensitive", None)
         
-        logger.info(f"Extraídos {len(elements)} elementos interativos")
+        logger.info(f"Extracted {len(elements)} interactive elements")
         
         return {
             "page_signals": page_signals,
@@ -296,7 +299,7 @@ def extract_elements(page: Page, mask_sensitive: bool = True) -> Dict[str, Any]:
         }
         
     except Exception as e:
-        logger.error(f"Erro ao extrair elementos: {e}")
+        logger.error(f"Error extracting elements: {e}")
         return {
             "page_signals": {},
             "elements": [],
@@ -309,19 +312,19 @@ def capture_snapshot(
     screenshot_path: str,
 ) -> None:
     """
-    Captura HTML e screenshot da página.
+    Captures HTML and screenshot of page.
     
     Args:
-        page: Página Playwright.
-        html_path: Caminho para salvar HTML.
-        screenshot_path: Caminho para salvar screenshot.
+        page: Playwright page.
+        html_path: Path to save HTML.
+        screenshot_path: Path to save screenshot.
     """
-    # Captura HTML
+    # Capture HTML
     html_content = page.content()
     with open(html_path, "w", encoding="utf-8") as f:
         f.write(html_content)
-    logger.info(f"HTML salvo: {html_path}")
+    logger.info(f"HTML saved: {html_path}")
     
-    # Captura screenshot
+    # Capture screenshot
     page.screenshot(path=screenshot_path, full_page=True)
-    logger.info(f"Screenshot salvo: {screenshot_path}")
+    logger.info(f"Screenshot saved: {screenshot_path}")

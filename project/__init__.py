@@ -1,1 +1,1 @@
-"""Framework de automação Super Play."""
+"""Super Play automation framework."""

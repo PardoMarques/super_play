@@ -1,4 +1,4 @@
-"""Utilitários principais do Super Play."""
+"""Super Play core utilities."""
 
 from .config import get_config
 from .artifacts import create_run_dirs, generate_run_id
@@ -19,5 +19,3 @@ __all__ = [
     "ActionRecorder",
     "setup_recorder",
 ]
-
-

@@ -1,4 +1,7 @@
-"""Utilitários de logging com suporte a arquivo."""
+"""
+Logging utilities with file support.
+Utilitarios de logging com suporte a arquivo.
+"""
 
 import logging
 import sys
@@ -6,26 +9,26 @@ from pathlib import Path
 from typing import Optional
 
 
-# Handler de arquivo global para sessão
+# Global file handler for session
 _file_handler: Optional[logging.FileHandler] = None
 
 
 def setup_file_logging(log_path: Path, level: Optional[int] = None) -> None:
     """
-    Configura logging para arquivo.
+    Configures file logging.
     
     Args:
-        log_path: Caminho para o arquivo de log.
-        level: Nível de log. Padrão: INFO.
+        log_path: Path to log file.
+        level: Log level. Default: INFO.
     """
     global _file_handler
     
     level = level or logging.INFO
     
-    # Garante diretório existe
+    # Ensure directory exists
     log_path.parent.mkdir(parents=True, exist_ok=True)
     
-    # Cria handler de arquivo
+    # Create file handler
     _file_handler = logging.FileHandler(log_path, encoding="utf-8")
     _file_handler.setLevel(level)
     
@@ -35,14 +38,14 @@ def setup_file_logging(log_path: Path, level: Optional[int] = None) -> None:
     )
     _file_handler.setFormatter(formatter)
     
-    # Adiciona ao logger raiz
+    # Add to root logger
     root_logger = logging.getLogger()
     root_logger.addHandler(_file_handler)
     root_logger.setLevel(level)
 
 
 def close_file_logging() -> None:
-    """Fecha o handler de arquivo."""
+    """Closes file handler."""
     global _file_handler
     
     if _file_handler:
@@ -54,29 +57,29 @@ def close_file_logging() -> None:
 
 def get_logger(name: str, level: Optional[int] = None) -> logging.Logger:
     """
-    Obtém uma instância de logger configurada.
+    Gets a configured logger instance.
     
-    Cria um logger com handler de stream e formatador básico.
+    Creates logger with stream handler and basic formatter.
     
     Args:
-        name: Nome do logger (tipicamente __name__).
-        level: Nível de log opcional. Padrão: INFO.
+        name: Logger name (typically __name__).
+        level: Optional log level. Default: INFO.
     
     Returns:
-        Instância de Logger configurada.
+        Configured Logger instance.
     """
     logger = logging.getLogger(name)
     
-    # Só configura se não houver handlers
+    # Only configure if no handlers exist
     if not logger.handlers:
         level = level or logging.INFO
         logger.setLevel(level)
         
-        # Handler de stream para stdout
+        # Stream handler for stdout
         handler = logging.StreamHandler(sys.stdout)
         handler.setLevel(level)
         
-        # Formatador básico
+        # Basic formatter
         formatter = logging.Formatter(
             fmt="%(asctime)s | %(levelname)-8s | %(name)s | %(message)s",
             datefmt="%Y-%m-%d %H:%M:%S"

@@ -21,14 +21,14 @@ log = logging.getLogger(__name__)
 @dataclass(frozen=True)
 class RetryPolicy:
     """
-    Política genérica de retry para operações instáveis.
-    - attempts: total de tentativas (>=1)
-    - base_delay_s: atraso inicial
-    - backoff: multiplicador exponencial
-    - max_delay_s: teto do atraso
-    - jitter_s: jitter uniforme [0, jitter_s]
-    - retry_on: tipos de exceção que disparam retry
-    - retry_if_message_contains: substrings que, se presentes na mensagem, disparam retry
+    Generic retry policy for unstable operations.
+    - attempts: total attempts (>=1)
+    - base_delay_s: initial delay
+    - backoff: exponential multiplier
+    - max_delay_s: delay ceiling
+    - jitter_s: uniform jitter [0, jitter_s]
+    - retry_on: exception types that trigger retry
+    - retry_if_message_contains: substrings that, if present in message, trigger retry
     """
     attempts: int = 3
     base_delay_s: float = 0.35
@@ -37,7 +37,7 @@ class RetryPolicy:
     jitter_s: float = 0.15
     retry_on: Tuple[Type[BaseException], ...] = (PlaywrightTimeoutError, PlaywrightError)
     retry_if_message_contains: Tuple[str, ...] = (
-        # falhas comuns/transientes (rede, navegação, alvo sumindo, etc.)
+        # common/transient failures (network, navigation, target disappearing, etc.)
         "net::ERR_ABORTED",
         "net::ERR_CONNECTION_RESET",
         "net::ERR_CONNECTION_CLOSED",
@@ -51,7 +51,7 @@ class RetryPolicy:
         "has been closed",
         "page.goto",
     )
-    # opcional: função custom para decidir retry
+    # optional: custom function to decide retry
     retry_predicate: Optional[Callable[[BaseException], bool]] = None
 
 
@@ -67,7 +67,7 @@ def is_transient_error(exc: BaseException, policy: RetryPolicy) -> bool:
         try:
             return bool(policy.retry_predicate(exc))
         except Exception:
-            # se o predicate falhar, não bloqueie retries básicos
+            # if predicate fails, don't block basic retries
             pass
 
     msg = str(exc) or ""
@@ -89,13 +89,13 @@ def run_with_retry(
     on_fail: Optional[Callable[[BaseException], None]] = None,
 ) -> Any:
     """
-    Executa fn() com retry para falhas transientes.
+    Executes fn() with retry for transient failures.
 
-    - on_retry(attempt, exc): chamado antes de dormir e repetir
-    - on_fail(exc): chamado antes de levantar a exceção final
+    - on_retry(attempt, exc): called before sleeping and retrying
+    - on_fail(exc): called before raising final exception
     """
     if policy.attempts < 1:
-        raise ValueError("RetryPolicy.attempts deve ser >= 1")
+        raise ValueError("RetryPolicy.attempts must be >= 1")
 
     last_exc: Optional[BaseException] = None
 
@@ -115,7 +115,7 @@ def run_with_retry(
                 raise
 
             log.warning(
-                "[retry] %s falhou (tentativa %s/%s): %s",
+                "[retry] %s failed (attempt %s/%s): %s",
                 action_name, attempt, policy.attempts, exc,
             )
             if on_retry:
@@ -126,10 +126,10 @@ def run_with_retry(
 
             _sleep_backoff(attempt, policy)
 
-    # teoricamente não chega aqui
+    # theoretically shouldn't reach here
     if last_exc:
         raise last_exc
-    raise RuntimeError(f"{action_name} falhou sem exceção (estado inválido)")
+    raise RuntimeError(f"{action_name} failed without exception (invalid state)")
 
 
 def clamp_timeout_ms(timeout_ms: Optional[int], default_ms: int) -> int:
@@ -139,5 +139,5 @@ def clamp_timeout_ms(timeout_ms: Optional[int], default_ms: int) -> int:
 
 
 def now_ts_compact() -> str:
-    # timestamp compacto para nomes de arquivo
+    # compact timestamp for filenames
     return time.strftime("%Y%m%d_%H%M%S", time.localtime())

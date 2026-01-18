@@ -1,7 +1,7 @@
 """
-Testes de integração para gen_food.py
+Integration tests for gen_food.py
 
-Valida o fluxo completo de coleta em modo snapshot.
+Validates complete collection flow in snapshot mode.
 """
 
 import pytest
@@ -12,12 +12,14 @@ from pathlib import Path
 
 
 class TestGenFoodSnapshot:
-    """Testes de integração para modo snapshot"""
+    """PT: Testes de integração para modo snapshot"""
+    """EN: Integration tests for snapshot mode"""
     
     @pytest.fixture
     def run_snapshot(self, temp_artifacts_dir):
-        """Executa gen_food em modo snapshot e retorna resultado"""
-        # Usa uma página simples e confiável para teste
+        """PT: Executa gen_food no modo snapshot e retorna o resultado"""
+        """EN: Executes gen_food in snapshot mode and returns result"""
+        # Uses a simple and reliable page for testing
         test_url = "data:text/html,<html><head><title>Test</title></head><body><button id='btn'>Click</button></body></html>"
         
         result = subprocess.run(
@@ -46,26 +48,29 @@ class TestGenFoodSnapshot:
         }
     
     def test_snapshot_exits_successfully(self, run_snapshot):
-        """gen_food --mode snapshot deve retornar código 0"""
+        """PT: gen_food --mode snapshot deve retornar código 0"""
+        """EN: gen_food --mode snapshot must return code 0"""
         assert run_snapshot["returncode"] == 0, \
-            f"Erro: {run_snapshot['stderr']}"
+            f"Error: {run_snapshot['stderr']}"
     
     def test_snapshot_creates_run_directory(self, run_snapshot):
-        """Deve criar diretório de run em artifacts/runs/"""
+        """PT: Deve criar diretório run em artifacts/runs/"""
+        """EN: Must create run directory in artifacts/runs/"""
         runs_dir = run_snapshot["artifacts_dir"] / "runs"
         
-        assert runs_dir.exists(), "Diretório runs/ deve existir"
+        assert runs_dir.exists(), "Directory runs/ must exist"
         
         run_dirs = list(runs_dir.iterdir())
-        assert len(run_dirs) >= 1, "Deve ter pelo menos 1 diretório de run"
+        assert len(run_dirs) >= 1, "Must have at least 1 run directory"
     
     def test_snapshot_creates_food_json(self, run_snapshot):
-        """Deve criar food.json com estrutura válida"""
+        """PT: Deve criar arquivo food.json com estrutura válida"""
+        """EN: Must create food.json with valid structure"""
         runs_dir = run_snapshot["artifacts_dir"] / "runs"
         run_dir = list(runs_dir.iterdir())[0]
         food_path = run_dir / "food" / "food.json"
         
-        assert food_path.exists(), "food.json deve existir"
+        assert food_path.exists(), "food.json must exist"
         
         with open(food_path, encoding="utf-8") as f:
             food = json.load(f)
@@ -76,12 +81,13 @@ class TestGenFoodSnapshot:
         assert "page_signals" in food
     
     def test_snapshot_creates_meta_json(self, run_snapshot):
-        """Deve criar meta.json com metadados"""
+        """PT: Deve criar arquivo meta.json com metadados"""
+        """EN: Must create meta.json with metadata"""
         runs_dir = run_snapshot["artifacts_dir"] / "runs"
         run_dir = list(runs_dir.iterdir())[0]
         meta_path = run_dir / "meta.json"
         
-        assert meta_path.exists(), "meta.json deve existir"
+        assert meta_path.exists(), "meta.json must exist"
         
         with open(meta_path, encoding="utf-8") as f:
             meta = json.load(f)
@@ -92,32 +98,35 @@ class TestGenFoodSnapshot:
         assert meta["mode"] == "snapshot"
     
     def test_snapshot_creates_html_file(self, run_snapshot):
-        """Deve criar arquivo HTML"""
+        """PT: Deve criar arquivo HTML"""
+        """EN: Must create HTML file"""
         runs_dir = run_snapshot["artifacts_dir"] / "runs"
         run_dir = list(runs_dir.iterdir())[0]
         html_dir = run_dir / "html"
         
-        assert html_dir.exists(), "Diretório html/ deve existir"
+        assert html_dir.exists(), "Directory html/ must exist"
         
         html_files = list(html_dir.glob("*.html"))
-        assert len(html_files) >= 1, "Deve ter pelo menos 1 arquivo HTML"
+        assert len(html_files) >= 1, "Must have at least 1 HTML file"
     
     def test_snapshot_creates_screenshot(self, run_snapshot):
-        """Deve criar screenshot PNG"""
+        """PT: Deve criar screenshot PNG"""
+        """EN: Must create PNG screenshot"""
         runs_dir = run_snapshot["artifacts_dir"] / "runs"
         run_dir = list(runs_dir.iterdir())[0]
         screenshots_dir = run_dir / "screenshots"
         
-        assert screenshots_dir.exists(), "Diretório screenshots/ deve existir"
+        assert screenshots_dir.exists(), "Directory screenshots/ must exist"
         
         png_files = list(screenshots_dir.glob("*.png"))
-        assert len(png_files) >= 1, "Deve ter pelo menos 1 screenshot"
+        assert len(png_files) >= 1, "Must have at least 1 screenshot"
     
     def test_snapshot_creates_session_log(self, run_snapshot):
-        """Deve criar log de sessão"""
+        """PT: Deve criar log de sessão"""
+        """EN: Must create session log"""
         runs_dir = run_snapshot["artifacts_dir"] / "runs"
         run_dir = list(runs_dir.iterdir())[0]
         log_path = run_dir / "logs" / "session.log"
         
-        assert log_path.exists(), "session.log deve existir"
-        assert log_path.stat().st_size > 0, "Log não deve estar vazio"
+        assert log_path.exists(), "session.log must exist"
+        assert log_path.stat().st_size > 0, "Log must not be empty"
